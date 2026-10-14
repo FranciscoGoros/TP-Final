@@ -1,11 +1,13 @@
-import Phaser from 'phaser'
+﻿import Phaser from 'phaser'
 import Player from '../player.js'
 import Box, { resolveBoxPushing } from '../box.js'
 import DoorSystem from '../door.js'
 import SpikeSystem from '../spikes.js'
 import LaserSystem from '../lasers.js'
+import EnemySystem from '../enemy.js'
 import timer from '../timer.js'
-import addRestartButton from '../hud.js'
+import lives, { INVULNERABLE_MS } from '../lives.js'
+import addRestartButton, { syncLives, addFloorLabel, addDebugNext } from '../hud.js'
 
 const PLATFORM_HEIGHT = 32
 
@@ -43,6 +45,11 @@ const LASER_BEAMS = [
   { side: 'left', levelY: 790, length: 220, onMs: 1800, offMs: 1500, phase: 1500 },
 ]
 
+const ENEMY_PATROLS = [
+  { x: 320, y: 666, left: 320, right: 480, speed: 60 },
+  { x: 570, y: 910, left: 570, right: 690, speed: 50 },
+]
+
 export default class Level4Scene extends Phaser.Scene {
   constructor() {
     super('Level4')
@@ -52,14 +59,18 @@ export default class Level4Scene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x1b1b22)
     timer.startLevel('Level4')
     this.gameOverTriggered = false
+    this.currentTime = 0
     this.timerText = this.add
       .text(this.scale.width - 12, 12, '', {
         fontFamily: 'monospace',
         fontSize: '18px',
         color: '#efdffc',
       })
+      .setScrollFactor(0)
       .setOrigin(1, 0)
     addRestartButton(this)
+    addFloorLabel(this, 4)
+    addDebugNext(this, () => this.scene.start('Level5'), 'DEBUG: NIVEL 5')
 
     this.platforms = []
     for (const { x, y, w } of LEDGES) {
@@ -75,13 +86,15 @@ export default class Level4Scene extends Phaser.Scene {
       new Box(this, 750, 460, 'green'),
     ]
     this.cursors = this.input.keyboard.createCursorKeys()
+    this.attackKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X)
+    this.heaveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C)
 
     this.physics.add.collider(this.player, this.platforms)
     this.physics.add.collider(this.boxes, this.platforms)
     this.physics.add.collider(this.player, this.boxes)
     this.physics.add.collider(this.boxes, this.boxes)
 
-    const onHit = () => this.onHazardHit()
+    const onHit = () => this.damagePlayer()
 
     this.spikes = new SpikeSystem(this, {
       strips: SPIKE_STRIPS,
@@ -91,6 +104,14 @@ export default class Level4Scene extends Phaser.Scene {
     this.lasers = new LaserSystem(this, {
       beams: LASER_BEAMS,
       player: this.player,
+      onHit,
+    })
+
+    this.enemies = new EnemySystem(this, {
+      patrols: ENEMY_PATROLS,
+      platforms: this.platforms,
+      player: this.player,
+      attack: this.player.attackRect,
       onHit,
     })
 
@@ -109,7 +130,23 @@ export default class Level4Scene extends Phaser.Scene {
     this.platforms.push(platform)
   }
 
-  onHazardHit() {
+  damagePlayer() {
+    if (this.gameOverTriggered) return
+
+    const now = this.currentTime
+    if (!this.player.isVulnerable(now)) return
+
+    if (lives.lose() <= 0) {
+      this.player.setInvulnerable(now, Number.MAX_SAFE_INTEGER)
+      this.die()
+      return
+    }
+
+    this.player.setInvulnerable(now, INVULNERABLE_MS)
+    syncLives(this)
+  }
+
+  die() {
     if (this.gameOverTriggered) return
     this.gameOverTriggered = true
 
@@ -117,15 +154,17 @@ export default class Level4Scene extends Phaser.Scene {
     this.player.setVisible(false)
     this.cameras.main.fadeOut(400, 0, 0, 0)
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start('GameOver', { level: 'Level4' })
+      this.scene.start('GameOver', { level: 'Level4', floor: 4 })
     })
   }
 
   update(time) {
     if (this.gameOverTriggered) return
+    this.currentTime = time
     this.timerText.setText(timer.format(timer.levelElapsed()))
     this.lasers.update(time)
-    this.player.update(this.cursors)
+    this.enemies.update(time)
+    this.player.update(this.cursors, { attack: this.attackKey, heave: this.heaveKey, boxes: this.boxes }, time)
     this.boxes.forEach((box) => box.update(this.player, this.scale.width))
     resolveBoxPushing(this.boxes)
     this.door.update(this.player)

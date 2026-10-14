@@ -25,6 +25,12 @@ export default class Box extends Phaser.GameObjects.Rectangle {
     this.body.setMaxVelocityX(PUSH_SPEED)
   }
 
+  // Empujón vertical del jugador (tecla C). Sube la caja lo justo para
+  // alcanzar el nivel de plataforma de arriba.
+  heaveUp(velocity) {
+    this.body.setVelocityY(-velocity)
+  }
+
   update(player, worldWidth) {
     const playerPushing = Math.abs(player.body.velocity.x) > 0
 

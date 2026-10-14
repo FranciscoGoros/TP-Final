@@ -1,10 +1,12 @@
-import Phaser from 'phaser'
+﻿import Phaser from 'phaser'
 import Player from '../player.js'
 import Box, { resolveBoxPushing } from '../box.js'
 import DoorSystem from '../door.js'
 import SpikeSystem from '../spikes.js'
+import EnemySystem from '../enemy.js'
 import timer from '../timer.js'
-import addRestartButton from '../hud.js'
+import lives, { INVULNERABLE_MS } from '../lives.js'
+import addRestartButton, { syncLives, addFloorLabel, addDebugNext } from '../hud.js'
 
 const PLATFORM_HEIGHT = 32
 
@@ -34,6 +36,11 @@ const SPIKE_STRIPS = [
   { x: 550, y: 820, w: 100, count: 4 },
 ]
 
+const ENEMY_PATROLS = [
+  { x: 320, y: 666, left: 320, right: 480, speed: 60 },
+  { x: 230, y: 910, left: 230, right: 420, speed: 50 },
+]
+
 export default class Level3Scene extends Phaser.Scene {
   constructor() {
     super('Level3')
@@ -43,14 +50,18 @@ export default class Level3Scene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x1b1b22)
     timer.startLevel('Level3')
     this.gameOverTriggered = false
+    this.currentTime = 0
     this.timerText = this.add
       .text(this.scale.width - 12, 12, '', {
         fontFamily: 'monospace',
         fontSize: '18px',
         color: '#efdffc',
       })
+      .setScrollFactor(0)
       .setOrigin(1, 0)
     addRestartButton(this)
+    addFloorLabel(this, 3)
+    addDebugNext(this, () => this.scene.start('Level4'), 'DEBUG: NIVEL 4')
 
     this.platforms = []
     for (const { x, y, w } of LEDGES) {
@@ -65,6 +76,8 @@ export default class Level3Scene extends Phaser.Scene {
       new Box(this, 695, 460, 'purple'),
     ]
     this.cursors = this.input.keyboard.createCursorKeys()
+    this.attackKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X)
+    this.heaveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C)
 
     this.physics.add.collider(this.player, this.platforms)
     this.physics.add.collider(this.boxes, this.platforms)
@@ -74,7 +87,15 @@ export default class Level3Scene extends Phaser.Scene {
     this.spikes = new SpikeSystem(this, {
       strips: SPIKE_STRIPS,
       player: this.player,
-      onHit: () => this.onSpikeHit(),
+      onHit: () => this.damagePlayer(),
+    })
+
+    this.enemies = new EnemySystem(this, {
+      patrols: ENEMY_PATROLS,
+      platforms: this.platforms,
+      player: this.player,
+      attack: this.player.attackRect,
+      onHit: () => this.damagePlayer(),
     })
 
     this.door = new DoorSystem(this, {
@@ -92,7 +113,23 @@ export default class Level3Scene extends Phaser.Scene {
     this.platforms.push(platform)
   }
 
-  onSpikeHit() {
+  damagePlayer() {
+    if (this.gameOverTriggered) return
+
+    const now = this.currentTime
+    if (!this.player.isVulnerable(now)) return
+
+    if (lives.lose() <= 0) {
+      this.player.setInvulnerable(now, Number.MAX_SAFE_INTEGER)
+      this.die()
+      return
+    }
+
+    this.player.setInvulnerable(now, INVULNERABLE_MS)
+    syncLives(this)
+  }
+
+  die() {
     if (this.gameOverTriggered) return
     this.gameOverTriggered = true
 
@@ -100,14 +137,16 @@ export default class Level3Scene extends Phaser.Scene {
     this.player.setVisible(false)
     this.cameras.main.fadeOut(400, 0, 0, 0)
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start('GameOver', { level: 'Level3' })
+      this.scene.start('GameOver', { level: 'Level3', floor: 3 })
     })
   }
 
-  update() {
+  update(time) {
     if (this.gameOverTriggered) return
+    this.currentTime = time
     this.timerText.setText(timer.format(timer.levelElapsed()))
-    this.player.update(this.cursors)
+    this.enemies.update(time)
+    this.player.update(this.cursors, { attack: this.attackKey, heave: this.heaveKey, boxes: this.boxes }, time)
     this.boxes.forEach((box) => box.update(this.player, this.scale.width))
     resolveBoxPushing(this.boxes)
     this.door.update(this.player)

@@ -18,6 +18,8 @@ TP-Agentes
  ├── vite.config.js
  ├── README.md
  ├── AGENTS.md
+ ├── scripts
+ │    └── verify-rooms.js      (verificador del generador, corre a mano con node)
  └── src
     ├── main.js
     ├── style.css
@@ -27,8 +29,11 @@ TP-Agentes
        ├── door.js
        ├── spikes.js
        ├── lasers.js
+       ├── enemy.js
+       ├── lives.js
        ├── timer.js
        ├── hud.js
+       ├── roomGenerator.js
        └── scenes
           ├── MenuScene.js
           ├── Level1Scene.js
@@ -36,12 +41,39 @@ TP-Agentes
           ├── Level3Scene.js
           ├── Level4Scene.js
           ├── Level5Scene.js
+          ├── RoomScene.js
           ├── GameOverScene.js
           └── VictoryScene.js
 
-## Cadena de puertas y flujo de escenas
-Level1→'Level2' → 'Level3' → 'Level4' → 'Level5' → 'Victory'. El GameOver recibe {level} para reintentar.
-Los niveles nuevos DEBEN registrarse en la lista de escenas de `src/main.js`. Mantener la cadena intacta al agregar/renombrar niveles.
+## Cadena de escenas y flujo
+Menu → Level1→'Level2' → 'Level3' → 'Level4' → 'Level5' → 'Room' (infinito).
+El GameOver recibe {level, floor} para reintentar; el piso se conserva al
+reintentar para no reiniciar el descenso. VictoryScene quedo sin uso: en modo
+roguelite la partida no tiene final, asi que sigue registrada en main.js pero
+nadie llega a ella.
+Los niveles nuevos DEBEN registrarse en la lista de escenas de `src/main.js`.
+Mantener la cadena intacta al agregar/renombrar niveles.
+
+## Modo roguelite (habitaciones procedurales)
+- Pisos 1-5 = niveles hechos a mano, con su puerta y su cambio de escena.
+- Del piso 6 en adelante NO hay puerta ni cambio de escena: todo pasa en una
+  sola `RoomScene`. Al resolver el puzzle aparece un ASCENSOR; al pisarlo se
+  genera la sala siguiente 960px más arriba, se destruye la anterior y la
+  camara panea con `camera.pan()`. No usar `scene.restart()` ni `scene.start()`.
+- OJO: el callback de `camera.pan()` corre en CADA frame, no al terminar.
+  Para una sola vez hay que escuchar `Phaser.Cameras.Scene2D.Events.PAN_COMPLETE`.
+- Las 3 vidas son para TODA la partida: solo se reinician en `MenuScene.onPlay()`.
+- Los sistemas (spikes/lasers/enemies) tienen `destroy()` porque al ascender hay
+  que sacarlos del mundo físico junto con los colliders.
+- `physics.world.setBounds()` debe ser amplio: la camara se desplaza muchos pisos
+  y con los límites por defecto el jugador quedaría encerrado.
+- REGLA DEL GENERADOR: una zona siempre tiene una caja que puede alcanzarla.
+  Las cajas nacen en plataformas altas y caen hasta el piso, asi que empujarlas
+  por el piso siempre las lleva a su zona. Como maximo 1 zona va elevada, y solo
+  con la caja ya en esa misma plataforma. Nunca pusas/centinelas encima de cajas,
+  zonas ni del spawn.
+- Correr `node scripts/verify-rooms.js` despues de tocar el generador: genera
+  4600 habitaciones y valida las reglas de solubilidad.
 
 ## Reglas de diseño de niveles para agente
 - Usar un patrón serpiente/zigzag para las plataformas. (alternar izquierda/derecha, caídas de ~90-130px);

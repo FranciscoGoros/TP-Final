@@ -24,7 +24,16 @@ export default class LaserSystem {
       this.beams.push({ beam, rect })
     }
 
-    scene.physics.add.overlap(this.player, this.beams.map((b) => b.rect), this.onHit)
+    this.overlaps = []
+    this.overlaps.push(scene.physics.add.overlap(this.player, this.beams.map((b) => b.rect), this.onHit))
+  }
+
+  // Al cambiar de habitacion hay que sacar beams y overlaps del mundo.
+  destroy() {
+    this.overlaps.forEach((o) => o && o.destroy())
+    this.overlaps = []
+    this.beams.forEach((b) => b.rect.destroy())
+    this.beams = []
   }
 
   update(now) {

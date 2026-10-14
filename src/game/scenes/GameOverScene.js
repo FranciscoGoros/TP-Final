@@ -8,6 +8,7 @@ export default class GameOverScene extends Phaser.Scene {
 
   init(data) {
     this.level = data?.level ?? 'Level1'
+    this.floor = data?.floor ?? 1
   }
 
   create() {
@@ -27,11 +28,21 @@ export default class GameOverScene extends Phaser.Scene {
     const restart = this.buildButton(width / 2, height * 0.5, 'REINICIAR NIVEL')
     const menu = this.buildButton(width / 2, height * 0.5 + 90, 'VOLVER AL MENÚ')
 
-    restart.on('pointerup', () => this.scene.start(this.level))
+    restart.on('pointerup', () =>
+      this.scene.start(this.level, { level: this.level, floor: this.floor, fresh: true })
+    )
     menu.on('pointerup', () => this.scene.start('Menu'))
 
     this.add
-      .text(width / 2, height * 0.5 + 185, `TIEMPO: ${timer.format(levelTime)}`, {
+      .text(width / 2, height * 0.5 + 165, `LLEGASTE AL PISO ${this.floor}`, {
+        fontFamily: 'monospace',
+        fontSize: '22px',
+        color: '#a78bfa',
+      })
+      .setOrigin(0.5)
+
+    this.add
+      .text(width / 2, height * 0.5 + 210, `TIEMPO: ${timer.format(levelTime)}`, {
         fontFamily: 'monospace',
         fontSize: '20px',
         color: '#fbbf24',

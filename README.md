@@ -1,6 +1,6 @@
 ### Nombre del juego
 
-**ESCARABOX** — Puzzle-platformer 2D en pantalla portrait (840×960): empujá cajas de colores sobre las zonas de su mismo color para desbloquear la puerta y avanzar de nivel. Cuenta con 5 niveles, una sola vida y peligros como púas y láseres.
+**ESCARABOX** — Puzzle-platformer 2D en pantalla portrait (840×960): empujá cajas de colores sobre las zonas de su mismo color para desbloquear la puerta y subir. Los pisos 1 a 5 están hechos a mano; del piso 6 en adelante las habitaciones se generan al azar, así que la partida no tiene final. Una sola partida con 3 vidas y peligros como púas, láseres y enemigos centinela.
 
 ## Alumno
 
@@ -27,7 +27,7 @@ npm run build
 
 ## Gameplay
 
-Puzzle de empuje de cajas: cada zona del suelo (o de una plataforma) debe recibir una caja del mismo color. Mientras no se completen todas las zonas, la puerta de salida permanece cerrada. El jugador tiene una sola vida: tocar una púa o un láser activo provoca Game Over, con opción de reintentar el nivel o volver al menú.
+Puzzle de empuje de cajas: cada zona del suelo (o de una plataforma) debe recibir una caja del mismo color. Mientras no se completen todas las zonas, la puerta de salida permanece cerrada. El jugador tiene **3 vidas**: tocar una púa, un láser activo o un enemigo quita una vida y otorga 1,2 s de invulnerabilidad parpadeante. Al llegar a 0 vidas se muestra el Game Over, con opción de reintentar el nivel o volver al menú.
 
 ### Objetivo
 
@@ -36,8 +36,33 @@ Colocar cada caja sobre la zona de su mismo color para abrir la puerta y complet
 ### Mecánicas principales
 
 - Push de cajas: empujar (no arrastrar) con el cuerpo; las cajas se desplazan sobre las plataformas y pueden caer a niveles inferiores.
-- 1 vida: púas y láseres activos (con previo aviso naranja) matan al instante → Game Over.
+- 3 vidas **para toda la partida**: tocar una púa, un láser activo o un enemigo quita una vida y otorga 1,2 s de invulnerabilidad parpadeante. Al llegar a 0 vidas se muestra el Game Over con el piso alcanzado.
+- Empujón vertical: con **C**, estando sobre el suelo y al lado de una caja, el jugador la levanta y sube con ella. Sube ~160 px por pulsación (un nivel de plataforma), así que una caja caída se recupera empujándola plataforma a plataforma. Si no hay caja al lado, la C no hace nada.
+- Ataque cuerpo a cuerpo: con **X** el jugador ejecuta un tajo corto hacia el lado al que mira. Dura ~130 ms con 320 ms de recarga.
+- Enemigos centinela: patrullan un tramo fijo de plataforma y se los elimina de un solo golpe. No empujan cajas, así que nunca bloquean la resolución de una habitación.
 - Puerta bloqueada: solo se desbloquea cuando todas las cajas están sobre sus zonas correspondientes.
+
+## Modo roguelite
+
+Los pisos **1 a 5** son los niveles hechos a mano, con su puerta y su cambio de escena. Al superar el piso 5 el juego entra en modo infinito, y ahí **ya no hay puertas ni transiciones**: todo ocurre en una sola escena. Cuando ponés las cajas en sus zonas aparece un **ascensor**; al pisarlo se genera la habitación siguiente 960 px más arriba y la cámara se desplaza hacia ella. No hay pantalla de victoria; la partida termina cuando te quedás sin vidas.
+
+La dificultad crece con el piso y tiene topes:
+
+| Pisos | Cajas | Enemigos | Púas | Láseres |
+|---|---|---|---|---|
+| 6–15 | 2 | 1 | 1 | 0–1 |
+| 16–25 | 3 | 2–3 | 2 | 1–2 |
+| 26+ | 4–5 | 3–4 | 3 | 3 |
+
+**Regla del generador:** una zona siempre tiene una caja que puede alcanzarla. Las cajas nacen en plataformas altas y caen de nivel hasta el piso, así que empujarlas por el piso siempre las lleva a su zona. Las púas y los centinelas se colocan solo en el hueco libre de cada plataforma, nunca encima de una caja, una zona ni del punto de aparición.
+
+Para verificar el generador después de tocarlo:
+
+```
+node scripts/verify-rooms.js
+```
+
+Genera 4600 habitaciones y valida las reglas de solubilidad (cajas apoyadas, una caja y una zona por color, zonas separadas, peligros que no tapan zonas ni el spawn, láseres que no cortan plataformas).
 
 ## Controles
 
@@ -45,6 +70,8 @@ Colocar cada caja sobre la zona de su mismo color para abrir la puerta y complet
 |---|---|
 | Mover | Flechas ← → |
 | Saltar | Espacio |
+| Atacar | X |
+| Subir caja | C |
 
 ## Arquitectura
 
@@ -52,14 +79,17 @@ Colocar cada caja sobre la zona de su mismo color para abrir la puerta y complet
 
 ```
 Game
- ├── Scenes (Menu, Level1..5, GameOver, Victory)
- ├── Player
+ ├── Scenes (Menu, Level1..5, Room, GameOver, Victory)
+ ├── Player (movimiento, salto, hitbox de ataque e invulnerabilidad)
  ├── Box (colores, push y resolución de colisiones entre cajas)
- ├── DoorSystem (puerta, zonas y transición de nivel)
+ ├── DoorSystem (puerta, zonas y transición)
  ├── SpikeSystem
  ├── LaserSystem
+ ├── EnemySystem (centinelas con patrulla y muerte por ataque)
+ ├── RoomGenerator (habitaciones procedurales del piso 6 en adelante)
+ ├── Lives (contador de 3 vidas + ventana de invulnerabilidad)
  ├── Timer (singleton)
- └── Hud (botón de reinicio)
+ └── Hud (botón de reinicio + indicadores de vida y piso)
 ```
 
 ## Agentes de OpenCode utilizados

@@ -19,7 +19,7 @@ import {
   roomOrigin,
   roomW,
   roomH,
-} from "/src/game/topDownRooms.js?t=1792756665194"
+} from "../topDownRooms.js";
 import { ARCHETYPES, stepEnemy, applyDamage } from "/src/game/enemyAI.js"
 import {
   FONT,

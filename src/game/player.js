@@ -52,6 +52,17 @@ export default class Player extends Phaser.GameObjects.Rectangle {
     return now >= this.invulnerableUntil
   }
 
+  // Al reconstruir la escena (reinicio o reintento) el Player es nuevo, pero
+  // `currentTime` arranca en 0 mientras performance.now() ya avanzo. Sin este
+  // reset, el jugador quedaria "invulnerable" durante los primeros ms reales
+  // (0 < invulnerableUntil viejo) y los peligros no harian dano.
+  reset(now = 0) {
+    this.invulnerableUntil = now
+    this.attackCooldownUntil = 0
+    this.attackActiveUntil = 0
+    this.heaveCooldownUntil = 0
+  }
+
   setInvulnerable(now, ms) {
     this.invulnerableUntil = now + ms
   }

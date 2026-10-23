@@ -1,6 +1,6 @@
 ### Nombre del juego
 
-**ESCARABOX** — Puzzle-platformer 2D en pantalla portrait (840×960): empujá cajas de colores sobre las zonas de su mismo color para desbloquear la puerta y subir. Los pisos 1 a 5 están hechos a mano; del piso 6 en adelante las habitaciones se generan al azar, así que la partida no tiene final. Una sola partida con 3 vidas y peligros como púas, láseres y enemigos centinela.
+**ESCARABOX** — Puzzle-platformer 2D en pantalla portrait (840×960): empujá cajas de colores sobre las zonas de su mismo color para desbloquear la puerta y avanzar. El juego tiene **5 habitaciones** y es **continuo**: las habitaciones se construyen una al lado de la otra dentro de una sola escena (`GameScene`), y al cruzar la puerta la cámara panea hacia la siguiente sin cortes. Una sola partida con 3 vidas y peligros como púas, láseres y enemigos centinela. Al completar la quinta habitación se muestra la pantalla de Victoria.
 
 ## Alumno
 
@@ -27,42 +27,28 @@ npm run build
 
 ## Gameplay
 
-Puzzle de empuje de cajas: cada zona del suelo (o de una plataforma) debe recibir una caja del mismo color. Mientras no se completen todas las zonas, la puerta de salida permanece cerrada. El jugador tiene **3 vidas**: tocar una púa, un láser activo o un enemigo quita una vida y otorga 1,2 s de invulnerabilidad parpadeante. Al llegar a 0 vidas se muestra el Game Over, con opción de reintentar el nivel o volver al menú.
+Puzzle de empuje de cajas: cada zona del suelo (o de una plataforma) debe recibir una caja del mismo color. Mientras no se completen todas las zonas, la puerta de salida permanece cerrada. El jugador tiene **3 vidas**: tocar una púa, un láser activo o un enemigo quita una vida y otorga 1,2 s de invulnerabilidad parpadeante. Al llegar a 0 vidas se muestra el Game Over, con opción de reintentar la habitación (con las 3 vidas de nuevo) o volver al menú.
 
 ### Objetivo
 
-Colocar cada caja sobre la zona de su mismo color para abrir la puerta y completar los 5 niveles consecutivos, que terminan en la pantalla de Victoria.
+Colocar cada caja sobre la zona de su mismo color para abrir la puerta y completar las 5 habitaciones consecutivas, que terminan en la pantalla de Victoria.
 
 ### Mecánicas principales
 
 - Push de cajas: empujar (no arrastrar) con el cuerpo; las cajas se desplazan sobre las plataformas y pueden caer a niveles inferiores.
-- 3 vidas **para toda la partida**: tocar una púa, un láser activo o un enemigo quita una vida y otorga 1,2 s de invulnerabilidad parpadeante. Al llegar a 0 vidas se muestra el Game Over con el piso alcanzado.
+- 3 vidas **para toda la partida**: tocar una púa, un láser activo o un enemigo quita una vida y otorga 1,2 s de invulnerabilidad parpadeante. Al llegar a 0 vidas se muestra el Game Over con la habitación alcanzada.
 - Empujón vertical: con **C**, estando sobre el suelo y al lado de una caja, el jugador la levanta y sube con ella. Sube ~160 px por pulsación (un nivel de plataforma), así que una caja caída se recupera empujándola plataforma a plataforma. Si no hay caja al lado, la C no hace nada.
 - Ataque cuerpo a cuerpo: con **X** el jugador ejecuta un tajo corto hacia el lado al que mira. Dura ~130 ms con 320 ms de recarga.
 - Enemigos centinela: patrullan un tramo fijo de plataforma y se los elimina de un solo golpe. No empujan cajas, así que nunca bloquean la resolución de una habitación.
 - Puerta bloqueada: solo se desbloquea cuando todas las cajas están sobre sus zonas correspondientes.
 
-## Modo roguelite
+## Juego continuo (5 habitaciones)
 
-Los pisos **1 a 5** son los niveles hechos a mano, con su puerta y su cambio de escena. Al superar el piso 5 el juego entra en modo infinito, y ahí **ya no hay puertas ni transiciones**: todo ocurre en una sola escena. Cuando ponés las cajas en sus zonas aparece un **ascensor**; al pisarlo se genera la habitación siguiente 960 px más arriba y la cámara se desplaza hacia ella. No hay pantalla de victoria; la partida termina cuando te quedás sin vidas.
+Las 5 habitaciones viven en **una sola escena** (`GameScene`), sin cortes entre pantallas. Cada habitación se construye **al lado** de la anterior (un offset de 840 px en X por habitación). Al entrar por la puerta abierta, la siguiente habitación ya está armada a la derecha y la cámara panea (`camera.pan`) hacia ella; al terminar el paneo se destruye la habitación anterior. Completar la quinta habitación lleva a la pantalla de Victoria.
 
-La dificultad crece con el piso y tiene topes:
-
-| Pisos | Cajas | Enemigos | Púas | Láseres |
-|---|---|---|---|---|
-| 6–15 | 2 | 1 | 1 | 0–1 |
-| 16–25 | 3 | 2–3 | 2 | 1–2 |
-| 26+ | 4–5 | 3–4 | 3 | 3 |
-
-**Regla del generador:** una zona siempre tiene una caja que puede alcanzarla. Las cajas nacen en plataformas altas y caen de nivel hasta el piso, así que empujarlas por el piso siempre las lleva a su zona. Las púas y los centinelas se colocan solo en el hueco libre de cada plataforma, nunca encima de una caja, una zona ni del punto de aparición.
-
-Para verificar el generador después de tocarlo:
-
-```
-node scripts/verify-rooms.js
-```
-
-Genera 4600 habitaciones y valida las reglas de solubilidad (cajas apoyadas, una caja y una zona por color, zonas separadas, peligros que no tapan zonas ni el spawn, láseres que no cortan plataformas).
+- `src/game/levels.js` contiene la composición de cada habitación como datos puros (plataformas, piso, zonas, puerta, cajas, spawn, púas, láseres y patrullas de enemigos). Las coordenadas son relativas al origen de cada habitación.
+- Al reintentar desde el Game Over, `GameScene` reconstruye solo la habitación alcanzada en el origen de la cámara.
+- OJO con Phaser 4: el callback de `camera.pan()` corre en **cada frame**, no al terminar. Para limpiar la habitación anterior una sola vez hay que escuchar `PAN_COMPLETE`.
 
 ## Controles
 
@@ -79,17 +65,17 @@ Genera 4600 habitaciones y valida las reglas de solubilidad (cajas apoyadas, una
 
 ```
 Game
- ├── Scenes (Menu, Level1..5, Room, GameOver, Victory)
+ ├── Scenes (Menu, Game, GameOver, Victory)
+ ├── levels (composición de las 5 habitaciones)
  ├── Player (movimiento, salto, hitbox de ataque e invulnerabilidad)
  ├── Box (colores, push y resolución de colisiones entre cajas)
- ├── DoorSystem (puerta, zonas y transición)
+ ├── DoorSystem (puerta y zonas; onEnter para pasar de habitación)
  ├── SpikeSystem
  ├── LaserSystem
  ├── EnemySystem (centinelas con patrulla y muerte por ataque)
- ├── RoomGenerator (habitaciones procedurales del piso 6 en adelante)
  ├── Lives (contador de 3 vidas + ventana de invulnerabilidad)
  ├── Timer (singleton)
- └── Hud (botón de reinicio + indicadores de vida y piso)
+ └── Hud (botón de reinicio + indicadores de vida y habitación)
 ```
 
 ## Agentes de OpenCode utilizados

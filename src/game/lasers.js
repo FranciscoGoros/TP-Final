@@ -6,7 +6,7 @@ const BEAM_ON = 0xff4d4d
 const BEAM_WARN = 0xff8800
 
 export default class LaserSystem {
-  constructor(scene, { beams, player, onHit }) {
+  constructor(scene, { beams, player, onHit, offsetX = 0 }) {
     this.onHit = onHit
     this.player = player
     this.beams = []
@@ -16,7 +16,7 @@ export default class LaserSystem {
 
     for (const beam of beams) {
       const fromLeft = beam.side === 'left'
-      const cx = fromLeft ? beam.length / 2 : worldWidth - beam.length / 2
+      const cx = (fromLeft ? beam.length / 2 : worldWidth - beam.length / 2) + offsetX
       const rect = scene.add.rectangle(cx, beam.levelY, beam.length, BEAM_WIDTH, BEAM_ON)
       rect.setVisible(false)
       scene.physics.add.existing(rect, true)

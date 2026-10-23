@@ -29,6 +29,14 @@ export default class DoorSystem {
     this.door.setStrokeStyle(3, 0x0c0a09)
   }
 
+  // Se usa al cambiar de habitación: destruye sus rects de zonas y puerta.
+  destroy() {
+    this.zones.forEach(({ rect }) => rect.destroy())
+    this.zones = []
+    if (this.door) this.door.destroy()
+    this.door = null
+  }
+
   update(player) {
     if (this.entered) return
 

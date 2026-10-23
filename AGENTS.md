@@ -1,140 +1,90 @@
 # AGENTS.md
 
 ## Proyecto
-Videojuego puzzle-platformer 2D en Phaser 4 creado para Desarrollo Tecnológico 2
+
+ESCARABOX es un videojuego en Phaser 4 con dos modos implementados:
+
+- **Puzzle-platformer 2D**: modo original descrito en `ESCARABOX - GDD.docx` y `ESCARABOX - GDD.pdf`. El jugador empuja cajas de colores hacia zonas del mismo color para abrir la puerta; hay púas, láseres, centinelas y 3 vidas.
+- **Prototipo top-down**: modo jugable que inicia actualmente el botón **JUGAR** del menú. Toma referencias de Zelda/Isaac y combina exploración de habitaciones, combate y puzzles Sokoban.
+
+El GDD original propone 3 niveles. El platformer actual tiene 5 habitaciones continuas; el prototipo top-down es una incorporación independiente y no reemplaza sus sistemas ni sus mapas.
 
 ## Comandos
-- `npm run dev` — servidor de desarrollo con HMR
-- `npm run build` — build de producción a `dist/`
-- `npm run preview` — previsualizar el build
-- NO existe script de test, lint ni typecheck — no inventarlos. Verificar los cambios con `npm run build`.
 
-## Estructura
+- `npm install` — instalar dependencias.
+- `npm run dev` — servidor de desarrollo con HMR.
+- `npm run build` — build de producción a `dist/`.
+- `npm run preview` — previsualizar el build.
+- `npm test` o `npm run test` — ejecutar pruebas con `node --test`.
 
-TP-Agentes
- ├── index.html
- ├── package.json
- ├── package-lock.json
- ├── vite.config.js
- ├── README.md
- ├── AGENTS.md
- └── src
-    ├── main.js
-    ├── style.css
-    └── game
-       ├── player.js
-       ├── box.js
-       ├── door.js
-       ├── spikes.js
-       ├── lasers.js
-       ├── enemy.js
-       ├── lives.js
-       ├── timer.js
-       ├── hud.js
-       ├── levels.js
-       └── scenes
-          ├── MenuScene.js
-          ├── GameScene.js
-          ├── GameOverScene.js
-          └── VictoryScene.js
+No hay scripts de lint ni typecheck. Para validar cambios, ejecutar las pruebas pertinentes y `npm run build`.
 
-## Cadena de escenas y flujo
-Menu → Game (una sola escena con las 5 habitaciones) → Victory.
-El GameOver recibe {level, floor} para reintentar la habitación; al reintentar
-se conserva la habitación alcanzada y se resetean las 3 vidas.
-Los niveles nuevos DEBEN registrarse en la lista de escenas de `src/main.js`.
+## Estructura relevante
 
-## Juego continuo (5 habitaciones, una sola escena)
-- Las 5 habitaciones viven en `GameScene` (key 'Game'). NO hay `scene.start`
-  entre habitaciones: se construyen una AL LADO de la otra con un offset en X
-  (ROOM_WIDTH = 840 por habitación).
-- La composición de cada habitación está en `src/game/levels.js` como datos
-  puros (ledges, floor, zones, door, boxes, spawn, spikes, lasers, enemies).
-  Coordenadas RELATIVAS al origen de la habitación; `buildRoom(level, offsetX)`
-  les suma el offset.
-- Al entrar por la puerta abierta (`DoorSystem` con `onEnter`) se llama a
-  `ascendToNext()`: se construye la habitación siguiente a la derecha, el
-  jugador se reposiciona y `camera.pan()` desplaza la cámara. Al terminar el
-  paneo se destruye la habitación anterior.
-- OJO: el callback de `camera.pan()` corre en CADA frame, no al terminar.
-  Para una sola vez hay que escuchar `Phaser.Cameras.Scene2D.Events.PAN_COMPLETE`.
-- La habitación vieja NO se destruye hasta PAN_COMPLETE, para que durante el
-  paneo se vean las dos habitaciones y no un hueco.
-- Las 3 vidas son para TODA la partida: se reinician en `MenuScene.onPlay()` y
-  al reintentar desde el GameOver, no en `GameScene.create()`.
-- Los sistemas (spikes/lasers/enemies) y `DoorSystem` tienen `destroy()` porque
-  al cambiar de habitación hay que sacarlos del mundo físico con sus colliders.
-- `LaserSystem` recibe un `offsetX` porque calcula su posición con el ancho de
-  la escena.
-- `physics.world.setBounds()` debe ser amplio: la cámara se desplaza varias
-  habitaciones y con los límites por defecto el jugador quedaría encerrado.
-- Completar la habitación 5 (`roomIndex === LEVELS.length - 1`) llama a
-  `finishGame()` → `scene.start('Victory')`.
+```text
+index.html
+src/
+  main.js                         # Configuración Phaser y registro de escenas
+  style.css
+  game/
+    box.js, door.js, enemy.js     # Sistemas del platformer
+    enemyAI.js                    # IA pura del prototipo top-down
+    enemyAI.test.js               # Pruebas node:test de la IA
+    hud.js, lives.js, timer.js, ui.js
+    lasers.js, spikes.js, player.js
+    levels.js                     # Datos de las 5 habitaciones platformer
+    topDownRooms.js               # Mapas y datos del prototipo
+    scenes/
+      MenuScene.js
+      GameScene.js                # Platformer continuo
+      TopDownTestScene.js         # Prototipo top-down
+      GameOverScene.js
+      VictoryScene.js
+```
 
-## Reglas de diseño de niveles para agente
-- Usar un patrón serpiente/zigzag para las plataformas. (alternar izquierda/derecha, caídas de ~90-130px);
-  EVITAR layouts de escalera exácta (una plataforma encima de la otra).
-- Altura de plataforma 32; tope = y-16. Las cajas de 40×40 quedan en center y = tope-20.
-  El jugador 32×32 aparece arriba de P1.
-- Las zonas elevadas de cajas deben ser alcanzables: la plataforma origen debe quedar por encima
-  del destino y las cajas descienden rodando por el borde (deriva ≈ 110 px/s al caer).
-  Mantener ≤2 zonas elevadas por nivel.
-- Mantener margen generoso en láseres para que no sea muy injusto.
-  Ubicar púas sin superponerse a cajas/zones. Puerta en el piso a la derecha.
+## Escenas y modos
 
-## Errores de Phaser 4
-- Phaser.Math.Min/Max NO existen → usar Math.min/max.
-- getBounds() no tiene getter `.center` → usar centerX/centerY.
-- Phaser.Math.Clamp existe y se usa en box.js.
-- physics.add.existing(rect, true) = cuerpo estático; los cuerpos deshabilitados (body.enable=false)
-  se omiten de forma segura en overlap/collide, y los arrays son objetivos de colisión válidos.
-- Mundo Arcade único y compartido entre escenas: cada escena registra sus propios colliders/overlaps.
-- No referenciar APIs que solo existen en Phaser 3 sin verificarlas contra node_modules/phaser.
+- `src/main.js` registra todas las escenas. Registrar allí cualquier escena nueva.
+- El menú **JUGAR** inicia `TopDownTest`. El menú no inicia `GameScene` actualmente.
+- `TopDownTestScene` es un prototipo separado: sus mapas, físicas, combate y viaje no deben acoplarse a `GameScene`.
+- `GameScene` conserva el platformer original en una sola escena. `LEVELS` contiene 5 habitaciones en `src/game/levels.js`; cada habitación nueva se construye a la derecha con `ROOM_WIDTH = 840`, la cámara panea y la anterior se destruye al recibir `PAN_COMPLETE`. El callback de `camera.pan()` se ejecuta en cada frame: no usarlo como callback de finalización.
+- Al perder todas las vidas, `GameOverScene` usa `{ level, floor }`. En el platformer, reintentar reconstruye la habitación alcanzada y reinicia las 3 vidas. En el prototipo top-down, la muerte con vidas restantes reinicia la escena conservando las vidas; al llegar a cero, Game Over permite volver al inicio del prototipo.
+- Completar la quinta habitación del platformer o despejar la sala `isGoal` del prototipo conduce a `Victory`.
 
-## Patrón de muerte por peligro (niveles con hazards)
-Proteger con `this.gameOverTriggered`; physics.pause(); player.setVisible(false);
-cameras.main.fadeOut(400) → una vez FADE_OUT_COMPLETE → scene.start('GameOver', {level}).
+## Platformer: mecánicas y reglas
 
-## Prototipo top-down (Zelda/Isaac) — `TopDownTestScene` + `topDownRooms.js`
-- Escena AISLADA de prueba (no toca GameScene/levels). Se accede desde el MENÚ
-  (botón `PROTOTIPO TOP-DOWN`).
-- Mapa de habitaciones en grilla lógica **3×3** (`ROOMS` en `src/game/topDownRooms.js`).
-  Cada habitación = `{ id, col, row, type, map, enemies?, isStart?, isGoal? }`.
-- Tipos: `empty` (tránsito), `combat` (matar enemigos), `boxes` (puzzle Sokoban),
-  `mixed` (ambas).
-- **Puertas en las paredes (N/S/E/O)**: se derivan de los vecinos reales
-  (`neighborsOf`). En los mapas las letras `^ v < >` marcan el vano; si no hay
-  vecino, esa celda se convierte en pared. Un solo vano por lado en col 5 (N/S) y
-  row 5 (W/E); `doorRect`/`entryPoint` están anclados a esas celdas.
-- Al cruzar una puerta (`checkDoors` → `travel`) se reconstruye la habitación
-  vecina y el jugador aparece en el borde opuesto (`entryPoint`). Transición con
-  fade corto (no pan). Los colliders y objetos se limpian via `this.roomColliders`
-  + `this.roomObjects` + `walls.clear()`.
-- **Room-lock estilo Isaac**: `applyDoorLock()` cierra las puertas (blocks físicos
-  con `body.enable`) mientras la tarea esté pendiente y las abre al despejar
-  (`onRoomCleared`). Las habitaciones ya despejadas no re-spawnean enemigos
-  (`roomState[id].cleared`).
-- La meta (`isGoal`) al despejarse llama a `scene.start('Victory')`.
-- `lives` es global y NO se resetea al cambiar de habitación (solo al morir/reiniciar
-  el prototipo → `scene.restart()`).
-- Empuje Sokoban con `BOX_GAP = 6` (`boxWouldCollide`): no permite apilar/solapar cajas.
-- **Tamaño por sala**: cada `ROOM` puede tener `cols`/`rows` (default 12×11); los
-  helpers `roomCols/roomRows/roomOrigin/cellCenter(room,…)/doorCenter(room,dir)/
-  doorRect(room,dir)/entryPoint(room,…)` son por-habitación. Las salas grandes
-  crecen simétricas y las puertas quedan en el centro (`doorCol`/`doorRow`), así
-  que siguen alineadas entre vecinas.
-- **Símbolos de mapa**: `#` muro (rect), `o` pilar (círculo, misma física),
-  `.` piso, `P` spawn, `a/b` cajas, `A/B` zonas, `D` pedestal, `^ v < >` puertas.
-- **Siluetas distintas por arquetipo** (Zelda/Isaac): plaza abierta, cuatro
-  pilares, pilares dispersos, anillo, cruz, bloque central, ruinas en L, nichos,
-  santuario. **IA inteligente**: lógica pura en `src/game/enemyAI.js` (testeable
-  con `node --test`). Arquetipos `pacer`/`chaser`/`charger`/`shooter` con **HP
-  variable**, **línea de vista**, **embestida con telegraph**, **disparos**. Los
-  enemigos se declaran en `ROOM.enemies = [{type, col, row}]` (no más `lanes`);
-  escalado por anillo (exterior simple → interior complejo → jefe con vida x2).
-  Siluetas distintas por arquetipo + flash al recibir daño.
-- `TILE = 64`; validar cada mapa nuevo con flood-fill (conectividad) y un solver
-  Sokoban antes de darlo por bueno. `npm run test` ejecuta los tests de IA.
+- Movimiento con flechas, salto con Espacio, ataque cuerpo a cuerpo con **X** y empujón vertical de caja con **C**. La **C** levanta una caja adyacente mientras el jugador está en el suelo; sirve para recuperar cajas caídas, no para transportarlas libremente.
+- El jugador tiene 3 vidas para la partida y 1,2 s de invulnerabilidad parpadeante tras recibir daño. Las vidas se reinician al empezar desde el menú o reintentar desde Game Over, no al crear `GameScene`.
+- Cada caja debe coincidir por color con su zona. La puerta se abre cuando todas las zonas reciben sus cajas.
+- Las composiciones de nivel en `levels.js` son datos puros con coordenadas relativas a la habitación; al construir, sumar el offset horizontal donde corresponda.
+- Al diseñar plataformas, preferir recorrido serpenteante/zigzag con desniveles aproximados de 90–130 px, no una escalera vertical exacta. Plataformas de 32 px; cajas de 40×40 px y jugador de 32×32 px.
+- Las zonas elevadas deben poder alcanzarse: las cajas caen por los bordes y pueden recuperarse con C. Evitar superponer púas con cajas o zonas, dar margen generoso alrededor de los láseres y ubicar la puerta en el piso a la derecha.
+- Los peligros deben usar `this.gameOverTriggered`, pausar físicas, ocultar al jugador y, al agotarse las vidas, hacer `fadeOut` y cambiar a `GameOver` tras `FADE_OUT_COMPLETE`.
+- `SpikeSystem`, `LaserSystem`, `EnemySystem` y `DoorSystem` tienen `destroy()` para retirar objetos, overlaps y colliders al abandonar una habitación.
+- `LaserSystem` recibe `offsetX` porque calcula su posición respecto del ancho de escena.
 
-## Notas
-- Repositorio git inicializado; dist/ está en .gitignore.
+## Prototipo top-down: mapas y mecánicas
+
+- `ROOMS` en `src/game/topDownRooms.js` define una grilla lógica de 3×3 con 9 habitaciones: `empty`, `combat`, `boxes` y `mixed`. Las dimensiones por defecto son 12×11 celdas, pero cada mapa puede definir `cols` y `rows`; cada celda mide `TILE = 64`.
+- Las habitaciones son datos con `id`, `col`, `row`, `type`, `map` y, según corresponda, `enemies`, `isStart` o `isGoal`. Las coordenadas de enemigos son índices de celda.
+- Símbolos: `#` muro, `o` pilar, `.` piso, `P` aparición, `a`/`b` cajas, `A`/`B` zonas, `D` pedestal y `^ v < >` puertas.
+- Las puertas transitables se derivan de los vecinos reales (`neighborsOf`). Mantener los marcadores de puerta alineados entre habitaciones vecinas; si no existe vecino, el vano se convierte en muro. `findDoorPosition` usa la posición marcada en el mapa; no asumir una columna/fila central fija.
+- `getGrid()` abre espacio frente a puertas válidas y talla pasillos para conectar puertas y aparición si el diseño las deja aisladas. `validateGrid()` informa inconsistencias de tamaño y datos de enemigos; revisar esos avisos y probar la conectividad y la solución de cajas al editar mapas. No hay un solver Sokoban implementado.
+- Las puertas se bloquean físicamente mientras quede pendiente la tarea de la sala: eliminar enemigos en `combat`, colocar cajas en `boxes` o ambas en `mixed`. Las salas despejadas conservan el estado durante la partida y no vuelven a generar enemigos.
+- El viaje entre salas usa un fade corto; `enterRoom()` limpia los colliders y objetos de la sala anterior. Mantener `roomObjects`, `roomColliders` y el grupo `walls` sincronizados al añadir entidades.
+- En este modo, flechas o WASD mueven en cuatro direcciones, **X** ataca y **C** empuja cajas. La C no tiene aquí la mecánica de empujón vertical del platformer.
+- `enemyAI.js` contiene lógica pura, sin Phaser. Arquetipos: `pacer`, `chaser`, `charger` y `shooter`; incluyen patrulla, persecución con línea de visión, embestida telegrafiada y proyectiles. Los enemigos tienen HP variable y el objetivo duplica su HP. Mantener las pruebas en `enemyAI.test.js`.
+- Las vidas son globales y no se reinician al cambiar de habitación. El objetivo `isGoal` termina el prototipo al despejarse.
+
+## Phaser 4 y físicas
+
+- No usar `Phaser.Math.Min/Max`; usar `Math.min/max`.
+- `getBounds()` no expone `.center`; usar `centerX` y `centerY`.
+- Verificar las APIs contra la versión Phaser 4 instalada en `node_modules/phaser`; no asumir que una API de Phaser 3 existe.
+- `physics.add.existing(rect, true)` crea un cuerpo estático. Los cuerpos con `body.enable = false` se omiten de forma segura en overlaps/colliders, y los arrays pueden ser objetivos de colisión.
+- Arcade Physics es un mundo compartido; cada escena debe registrar y limpiar sus propios colliders y overlaps.
+- En el platformer, `physics.world.setBounds()` debe abarcar las habitaciones recorridas por la cámara.
+
+## Nota de diseño
+
+El GDD (DOCX/PDF) es la referencia del concepto original del platformer (movimiento, cajas, peligros, centinelas, ataque con X y pantallas de victoria/derrota). Antes de modificar controles o reglas compartidas, comprobar el modo afectado: el platformer y el prototipo top-down tienen flujos y comportamiento de la tecla C distintos.

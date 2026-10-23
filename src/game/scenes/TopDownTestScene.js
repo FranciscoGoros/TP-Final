@@ -1,4 +1,4 @@
-import Phaser from "/node_modules/.vite/deps/phaser.js?v=78944e93"
+import Phaser from "phaser";
 import { BOX_COLORS } from "/src/game/box.js"
 import lives, { INVULNERABLE_MS } from "/src/game/lives.js"
 import {

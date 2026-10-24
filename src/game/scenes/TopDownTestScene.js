@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BOX_COLORS } from "/src/game/box.js"
-import lives, { INVULNERABLE_MS } from "/src/game/lives.js"
+import lives, { INVULNERABLE_MS, MAX_LIVES } from "/src/game/lives.js"
 import {
   TILE,
   DIRS,
@@ -70,8 +70,6 @@ const ENEMY_HURT_MS = 120
 const DEATH_FADE_MS = 180
 const BLINK_MS = 80
 
-const MAX_LIVES = 3
-
 const WALL_FILL = 0x2b3b43
 const WALL_STROKE = 0x0b1114
 const WALL_TOP = 0x4d6673
@@ -111,6 +109,7 @@ export default class TopDownTestScene extends Phaser.Scene {
     this.enemies = []
     this.ghosts = []
     this.boxes = []
+    this.healthPickups = []
     this.zones = []
     this.doors = []
     this.doorBlocks = []
@@ -189,7 +188,7 @@ export default class TopDownTestScene extends Phaser.Scene {
     // Estado por habitacion (persistente entre visitas).
     this.roomState = {}
     for (const room of ROOMS) {
-      this.roomState[room.id] = { cleared: false }
+      this.roomState[room.id] = { cleared: false, healthPickupCollected: false }
     }
 
     this.player = this.add
@@ -513,6 +512,7 @@ export default class TopDownTestScene extends Phaser.Scene {
     this.grid = this.getGrid(room)
     this.enterDir = enterDir
     this.boxes = []
+    this.healthPickups = []
     this.zones = []
     this.enemies = []
     this.ghosts = []
@@ -532,6 +532,7 @@ export default class TopDownTestScene extends Phaser.Scene {
     this.buildFromMap(room)
 
     this.buildDoors(room)
+    this.buildHealthPickup(room)
 
     // Entidades.
     const point =
@@ -1596,6 +1597,39 @@ export default class TopDownTestScene extends Phaser.Scene {
     }
   }
 
+  buildHealthPickup(room) {
+    const pickup = room.healthPickup
+    if (!pickup || this.roomState[room.id].healthPickupCollected) return
+
+    const { x, y } = cellCenter(room, pickup.col, pickup.row)
+    const background = this.add
+      .circle(x, y, 18, 0x166534)
+      .setStrokeStyle(3, 0x86efac)
+      .setDepth(5)
+    const heart = makeHeart(this, x, y, 22).setDepth(6)
+    this.healthPickups.push({ x, y, background, heart })
+    this.roomObjects.push(background, heart)
+  }
+
+  collectHealthPickups() {
+    if (lives.remaining >= MAX_LIVES) return
+
+    const playerBounds = this.player.getBounds()
+    for (const pickup of this.healthPickups) {
+      if (!pickup.background.active) continue
+
+      const pickupBounds = pickup.background.getBounds()
+      if (!Phaser.Geom.Rectangle.Overlaps(playerBounds, pickupBounds)) continue
+
+      lives.gain()
+      this.roomState[this.room.id].healthPickupCollected = true
+      pickup.background.destroy()
+      pickup.heart.destroy()
+      this.syncLives()
+      break
+    }
+  }
+
   update(time) {
     if (!this.player || !this.player.body) return
     this.currentTime = time
@@ -1632,6 +1666,7 @@ export default class TopDownTestScene extends Phaser.Scene {
       this.updateEnemies(time)
       this.updateInvulnerability(time)
       this.updateZoneFeedback()
+      this.collectHealthPickups()
 
       // Si la tarea se cumple (cajas en su lugar y, si hay, enemigos
       // eliminados), se despeja la habitacion y se abren las puertas.

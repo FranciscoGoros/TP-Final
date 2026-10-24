@@ -13,6 +13,11 @@ const lives = {
     return this.current
   },
 
+  gain() {
+    this.current = Math.min(MAX_LIVES, this.current + 1)
+    return this.current
+  },
+
   get remaining() {
     return this.current
   },

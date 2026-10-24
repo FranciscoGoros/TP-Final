@@ -52,6 +52,8 @@ Hay cuatro arquetipos de enemigos: patrulleros, perseguidores, cargadores que av
 
 El jugador comienza con **3 vidas**. Al recibir daño obtiene un breve período de invulnerabilidad. Las vidas se conservan al viajar entre habitaciones y al reaparecer tras una muerte. Si se agotan, aparece Game Over; desde allí se puede reiniciar el prototipo o volver al menú.
 
+Cada tres habitaciones hay un **corazón recolectable** que recupera 1 vida. Si ya tienes las 3 vidas, el corazón permanece en la habitación hasta que recibas daño.
+
 ## Arquitectura
 
 - `src/main.js`: configuración del juego y registro de escenas.

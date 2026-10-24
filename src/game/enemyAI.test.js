@@ -36,8 +36,15 @@ function makeEnemy(over = {}) {
 const open = () => false
 const wallAt = (wx, wy) => wx >= 140 && wx <= 160
 
-test('ARCHETYPES define los 4 arquetipos con stats validos', () => {
-  assert.deepEqual(ENEMY_TYPES.sort(), ['charger', 'chaser', 'pacer', 'shooter'])
+test('ARCHETYPES define los 6 arquetipos con stats validos', () => {
+  assert.deepEqual(ENEMY_TYPES.sort(), [
+    'charger',
+    'chaser',
+    'lurker',
+    'pacer',
+    'shooter',
+    'warden',
+  ])
   for (const type of ENEMY_TYPES) {
     const a = ARCHETYPES[type]
     assert.ok(a.speed > 0, `${type} speed`)

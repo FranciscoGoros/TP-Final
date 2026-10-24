@@ -369,6 +369,7 @@ export const ROOMS = [
     row: 0,
     type: 'boxes',
     map: MAP_B1,
+    healthPickup: { col: 5, row: 8 },
   },
   {
     id: 'm1',
@@ -397,6 +398,7 @@ export const ROOMS = [
     map: MAP_C3,
     cols: 15,
     enemies: ENEMIES_C3,
+    healthPickup: { col: 7, row: 6 },
   },
   {
     id: 'm2',
@@ -427,6 +429,7 @@ export const ROOMS = [
     rows: 13,
     enemies: ENEMIES_GOAL,
     isGoal: true,
+    healthPickup: { col: 8, row: 7 },
   },
 ]
 

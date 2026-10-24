@@ -75,6 +75,7 @@ src/
 - En este modo, flechas o WASD mueven en cuatro direcciones, **X** ataca y **C** empuja cajas. La C no tiene aquí la mecánica de empujón vertical del platformer.
 - `enemyAI.js` contiene lógica pura, sin Phaser. Arquetipos: `pacer`, `chaser`, `charger` y `shooter`; incluyen patrulla, persecución con línea de visión, embestida telegrafiada y proyectiles. Los enemigos tienen HP variable y el objetivo duplica su HP. Mantener las pruebas en `enemyAI.test.js`.
 - Las vidas son globales y no se reinician al cambiar de habitación. El objetivo `isGoal` termina el prototipo al despejarse.
+- Hay un corazón recolectable en una habitación de cada grupo de tres (órdenes 2, 5 y 8 de `ROOMS`). Recupera una vida hasta el máximo de 3; si el jugador está a vida completa, permanece disponible. Registrar su ubicación en `healthPickup` y conservar el estado `healthPickupCollected` por habitación.
 
 ## Phaser 4 y físicas
 

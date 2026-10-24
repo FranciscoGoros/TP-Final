@@ -279,48 +279,74 @@ const MAP_GOAL = [
 ]
 
 // ── enemigos por dificultad ───────────────────────────────────────
+// ── enemigos por habitacion ──────────────────────────────────────
+//
+// Escala de dificultad (room.order define el orden de visita sugerido):
+//   0-1  solo pacer/chaser → simple, aprender mecánicas
+//   2-3  aparecen charger y shooter → presión moderada
+//   4-5  lurker y warden → enemigos de alta inteligencia
+//   6+   goal: todos los tipos, más HP (bossScale x2)
+//
+// El orden de las salas en ROOMS sigue la ruta natural:
+//   start(vacía) → c1 → b1 → m1 → c2 → c3 → m2 → b2 → goal
+// "order" es la posición en ese camino (0 = start, 8 = goal).
+// La escena puede ignorarlo; está aquí solo como referencia semántica.
+
 const ENEMIES_C1 = [
-  { type: 'pacer', col: 2, row: 3 },
-  { type: 'chaser', col: 4, row: 9 },
+  // Primer sala de combate: solo mecánicas básicas (pacer + chaser).
+  { type: 'pacer',  col: 3, row: 3 },
+  { type: 'pacer',  col: 8, row: 7 },
+  { type: 'chaser', col: 5, row: 5 },
 ]
 
 const ENEMIES_M1 = [
+  // Primera sala mixta: shooter en esquina, charger libre, un pacer de relleno.
+  { type: 'pacer',   col: 1, row: 8 },
   { type: 'shooter', col: 5, row: 2 },
   { type: 'charger', col: 6, row: 7 },
 ]
 
 const ENEMIES_C2 = [
-  { type: 'chaser', col: 1, row: 4 },
-  { type: 'charger', col: 9, row: 6 },
-  { type: 'shooter', col: 5, row: 5 },
+  // Segunda sala de combate: todos corren, shooter como amenaza de fondo.
+  { type: 'chaser',  col: 1, row: 4 },
+  { type: 'chaser',  col: 9, row: 4 },
+  { type: 'charger', col: 5, row: 8 },
+  { type: 'shooter', col: 5, row: 1 },
 ]
 
 const ENEMIES_C3 = [
-  { type: 'shooter', col: 7, row: 1 },
-  { type: 'charger', col: 12, row: 4 },
-  { type: 'chaser', col: 5, row: 9 },
-  { type: 'charger', col: 7, row: 9 },
+  // Sala amplia: lurker emboscador + charger + shooter en diagonal.
+  { type: 'lurker',  col: 2,  row: 9 },
+  { type: 'lurker',  col: 11, row: 1 },
+  { type: 'shooter', col: 7,  row: 1 },
+  { type: 'charger', col: 12, row: 7 },
 ]
 
 const ENEMIES_M2 = [
+  // Sala mixta avanzada: warden interceptador + duo charger/shooter + lurker.
+  { type: 'warden',  col: 5, row: 5 },
   { type: 'charger', col: 1, row: 3 },
-  { type: 'shooter', col: 10, row: 3 },
-  { type: 'chaser', col: 9, row: 7 },
-  { type: 'pacer', col: 2, row: 9 },
+  { type: 'shooter', col: 9, row: 3 },
+  { type: 'lurker',  col: 9, row: 7 },
 ]
 
 const ENEMIES_GOAL = [
-  { type: 'chaser', col: 1, row: 4 },
-  { type: 'charger', col: 14, row: 4 },
-  { type: 'shooter', col: 1, row: 8 },
-  { type: 'shooter', col: 14, row: 8 },
-  { type: 'charger', col: 7, row: 10 },
+  // Sala final: toda la plantilla. HP x2 por bossScale.
+  { type: 'warden',  col: 7,  row: 5  },
+  { type: 'chaser',  col: 2,  row: 4  },
+  { type: 'chaser',  col: 13, row: 4  },
+  { type: 'charger', col: 2,  row: 9  },
+  { type: 'charger', col: 13, row: 9  },
+  { type: 'shooter', col: 1,  row: 1  },
+  { type: 'shooter', col: 14, row: 1  },
+  { type: 'lurker',  col: 7,  row: 11 },
 ]
 
 // ── grilla 3x3 ────────────────────────────────────────────────────
 export const ROOMS = [
   {
     id: 'start',
+    order: 0,
     col: 0,
     row: 0,
     type: 'empty',
@@ -329,6 +355,7 @@ export const ROOMS = [
   },
   {
     id: 'c1',
+    order: 1,
     col: 1,
     row: 0,
     type: 'combat',
@@ -337,6 +364,7 @@ export const ROOMS = [
   },
   {
     id: 'b1',
+    order: 2,
     col: 2,
     row: 0,
     type: 'boxes',
@@ -344,6 +372,7 @@ export const ROOMS = [
   },
   {
     id: 'm1',
+    order: 3,
     col: 0,
     row: 1,
     type: 'mixed',
@@ -352,6 +381,7 @@ export const ROOMS = [
   },
   {
     id: 'c2',
+    order: 4,
     col: 1,
     row: 1,
     type: 'combat',
@@ -360,6 +390,7 @@ export const ROOMS = [
   },
   {
     id: 'c3',
+    order: 5,
     col: 2,
     row: 1,
     type: 'combat',
@@ -369,6 +400,7 @@ export const ROOMS = [
   },
   {
     id: 'm2',
+    order: 6,
     col: 0,
     row: 2,
     type: 'mixed',
@@ -377,6 +409,7 @@ export const ROOMS = [
   },
   {
     id: 'b2',
+    order: 7,
     col: 1,
     row: 2,
     type: 'boxes',
@@ -385,6 +418,7 @@ export const ROOMS = [
   },
   {
     id: 'goal',
+    order: 8,
     col: 2,
     row: 2,
     type: 'mixed',
